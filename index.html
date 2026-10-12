@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MesaByte | Cardápio Digital Inteligente</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            900: '#09090b',
+                            800: '#18181b',
+                            700: '#27272a',
+                            600: '#3f3f46'
+                        },
+                        brand: {
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: rgba(39, 39, 42, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #09090b; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    </style>
+</head>
+<body class="bg-dark-900 text-slate-100 min-h-screen selection:bg-brand-500 selection:text-white" x-data="mesaByteApp()" x-init="init()">
+
+    <!-- MOBILE CONTAINER WRAPPER -->
+    <div class="max-w-md mx-auto min-h-screen bg-dark-900 shadow-2xl relative flex flex-col justify-between overflow-hidden border-x border-dark-800">
+
+        <!-- TOP HEADER -->
+        <header class="sticky top-0 z-40 glass-panel px-4 py-3 flex items-center justify-between border-b border-dark-800">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/30">
+                    <i data-lucide="utensils" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-tight flex items-center gap-1.5">
+                        MesaByte <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-400 font-medium">Mesa 04</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Online • UniCarioca
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button @click="activeTab = 'status'" class="relative p-2 rounded-xl glass-card text-slate-300 hover:text-white transition">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                    <span x-show="orders.length > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-brand-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-bounce" x-text="orders.length"></span>
+                </button>
+                <button @click="openCart()" class="relative p-2 rounded-xl bg-brand-600 text-white hover:bg-brand-500 transition shadow-lg shadow-brand-600/30">
+                    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                    <span x-show="cartCount > 0" class="absolute -top-1 -right-1 w-5 h-5 bg-white text-brand-700 text-[10px] font-bold rounded-full flex items-center justify-center shadow" x-text="cartCount"></span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 pb-24 overflow-y-auto">
+            
+            <!-- TAB: CARDÁPIO (MENU) -->
+            <div x-show="activeTab === 'menu'" class="p-4 space-y-6">
+                <!-- WELCOME BANNER -->
+                <div class="relative rounded-2xl overflow-hidden p-5 bg-gradient-to-r from-indigo-900/50 via-purple-900/30 to-brand-900/50 border border-brand-500/25 shadow-xl">
+                    <div class="absolute -right-6 -bottom-6 w-32 h-32 bg-brand-500/20 rounded-full blur-2xl"></div>
+                    <div class="relative z-10">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-indigo-400">Cardápio Digital Inteligente</span>
+                        <h2 class="text-xl font-extrabold text-white mt-1">Bem-vindo(a), <span x-text="clientName" class="text-indigo-300"></span>! 👋</h2>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">Faça seu pedido diretamente da mesa com total autonomia, rapidez e tecnologia.</p>
+                        <div class="mt-4 flex items-center gap-2">
+                            <button @click="callWaiter()" class="px-3.5 py-2 rounded-xl bg-dark-800/90 hover:bg-dark-700 text-xs font-medium text-slate-200 border border-dark-600 flex items-center gap-1.5 transition">
+                                <i data-lucide="user-check" class="w-3.5 h-3.5 text-brand-400"></i> Chamar Garçom
+                            </button>
+                            <button @click="requestBill()" class="px-3.5 py-2 rounded-xl bg-dark-800/90 hover:bg-dark-700 text-xs font-medium text-slate-200 border border-dark-600 flex items-center gap-1.5 transition">
+                                <i data-lucide="receipt" class="w-3.5 h-3.5 text-emerald-400"></i> Pedir Conta
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEARCH & CATEGORIES -->
+                <div class="space-y-3">
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-3.5 top-3 w-4 h-4 text-slate-400"></i>
+                        <input type="text" x-model="searchQuery" placeholder="Buscar pratos, bebidas, sobremesas..." class="w-full bg-dark-800/80 border border-dark-700 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 transition">
+                    </div>
+
+                    <!-- Category Pills -->
+                    <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                        <template x-for="cat in categories" :key="cat.id">
+                            <button @click="selectedCategory = cat.id" :class="selectedCategory === cat.id ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/30 border-brand-500' : 'glass-card text-slate-400 hover:text-white border-dark-700'" class="px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition border">
+                                <span x-text="cat.name"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- PRODUCT GRID -->
+                <div class="grid grid-cols-1 gap-3.5">
+                    <template x-for="item in filteredProducts" :key="item.id">
+                        <div class="glass-card rounded-2xl p-3.5 flex gap-4 items-center border border-dark-700/60 hover:border-brand-500/40 transition group cursor-pointer" @click="openItemModal(item)">
+                            <img :src="item.image" :alt="item.name" class="w-20 h-20 rounded-xl object-cover group-hover:scale-105 transition duration-300">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-brand-400 px-2 py-0.5 rounded-md bg-brand-500/10" x-text="item.categoryName"></span>
+                                    <span class="text-xs text-slate-400 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> <span x-text="item.time"></span></span>
+                                </div>
+                                <h3 class="font-bold text-sm text-white mt-1 truncate" x-text="item.name"></h3>
+                                <p class="text-xs text-slate-400 line-clamp-1 mt-0.5" x-text="item.description"></p>
+                                <div class="flex items-center justify-between mt-2.5">
+                                    <span class="font-extrabold text-brand-400 text-sm" x-text="formatMoney(item.price)"></span>
+                                    <button @click.stop="addToCartDirect(item)" class="w-8 h-8 rounded-lg bg-brand-600 hover:bg-brand-500 text-white flex items-center justify-center transition shadow-md shadow-brand-600/30">
+                                        <i data-lucide="plus" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- TAB: STATUS / KDS -->
+            <div x-show="activeTab === 'status'" class="p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i data-lucide="activity" class="w-5 h-5 text-brand-400"></i> Meus Pedidos
+                    </h2>
+                    <span class="text-xs text-slate-400" x-text="orders.length + ' pedido(s)'"></span>
+                </div>
+
+                <template x-if="orders.length === 0">
+                    <div class="glass-card rounded-2xl p-8 text-center space-y-3 mt-10">
+                        <div class="w-16 h-16 rounded-2xl bg-dark-800 flex items-center justify-center mx-auto text-slate-500">
+                            <i data-lucide="shopping-bag" class="w-8 h-8"></i>
+                        </div>
+                        <h3 class="font-bold text-white text-base">Nenhum pedido ativo</h3>
+                        <p class="text-xs text-slate-400 max-w-xs mx-auto">Explore nosso cardápio digital e faça seu primeiro pedido agora mesmo.</p>
+                        <button @click="activeTab = 'menu'" class="px-5 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-bold hover:bg-brand-500 transition shadow-lg shadow-brand-600/30">
+                            Ver Cardápio
+                        </button>
+                    </div>
+                </template>
+
+                <template x-for="order in orders" :key="order.id">
+                    <div class="glass-card rounded-2xl p-4 space-y-3 border border-dark-700">
+                        <div class="flex items-center justify-between border-b border-dark-700 pb-3">
+                            <div>
+                                <span class="font-bold text-sm text-white" x-text="'Pedido #' + order.id"></span>
+                                <p class="text-[10px] text-slate-400" x-text="order.timeFormatted"></p>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-xs font-semibold"
+                                  :class="{
+                                      'bg-amber-500/20 text-amber-400 border border-amber-500/30': order.status === 'Recebido',
+                                      'bg-blue-500/20 text-blue-400 border border-blue-500/30': order.status === 'Em Preparo',
+                                      'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30': order.status === 'Servido'
+                                  }" x-text="order.status"></span>
+                        </div>
+
+                        <div class="space-y-2">
+                            <template x-for="item in order.items" :key="item.id">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-slate-300"><strong class="text-brand-400" x-text="item.qty + 'x'"></strong> <span x-text="item.name"></span></span>
+                                    <span class="text-slate-400" x-text="formatMoney(item.price * item.qty)"></span>
+                                </div>
+                            </template>
+                        </div>
+
+                        <!-- Status Timeline -->
+                        <div class="pt-2 border-t border-dark-700 flex items-center justify-between text-[11px] text-slate-400">
+                            <div class="flex items-center gap-1" :class="order.step >= 1 ? 'text-brand-400 font-bold' : ''">
+                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" :class="order.step >= 1 ? 'bg-brand-600 text-white' : 'bg-dark-800 text-slate-500'">1</div>
+                                Recebido
+                            </div>
+                            <div class="h-0.5 flex-1 mx-2 bg-dark-700"></div>
+                            <div class="flex items-center gap-1" :class="order.step >= 2 ? 'text-brand-400 font-bold' : ''">
+                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" :class="order.step >= 2 ? 'bg-brand-600 text-white' : 'bg-dark-800 text-slate-500'">2</div>
+                                Cozinha
+                            </div>
+                            <div class="h-0.5 flex-1 mx-2 bg-dark-700"></div>
+                            <div class="flex items-center gap-1" :class="order.step >= 3 ? 'text-emerald-400 font-bold' : ''">
+                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" :class="order.step >= 3 ? 'bg-emerald-600 text-white' : 'bg-dark-800 text-slate-500'">3</div>
+                                Servido
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-2">
+                            <span class="text-xs text-slate-400">Total do Pedido:</span>
+                            <span class="font-bold text-sm text-white" x-text="formatMoney(order.total)"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- TAB: MESA / INFO -->
+            <div x-show="activeTab === 'mesa'" class="p-4 space-y-4">
+                <div class="glass-card rounded-2xl p-5 space-y-4 text-center border border-dark-700">
+                    <div class="w-16 h-16 rounded-2xl bg-brand-600/20 text-brand-400 flex items-center justify-center mx-auto border border-brand-500/30">
+                        <i data-lucide="qr-code" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-white">Mesa 04 • Salão Principal</h2>
+                        <p class="text-xs text-slate-400 mt-1">UniCarioca • Projeto Integrador MesaByte</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <div class="glass-panel rounded-xl p-3 text-left">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold">Cliente</span>
+                            <p class="text-xs font-bold text-white mt-0.5 truncate" x-text="clientName"></p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-3 text-left">
+                            <span class="text-[10px] text-slate-400 uppercase font-semibold">Atendente</span>
+                            <p class="text-xs font-bold text-emerald-400 mt-0.5">Carlos Silva</p>
+                        </div>
+                    </div>
+
+                    <button @click="changeClientName()" class="w-full py-2.5 rounded-xl bg-dark-800 hover:bg-dark-700 text-xs font-medium text-slate-300 border border-dark-600 transition">
+                        Alterar Nome do Cliente
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- BOTTOM NAV BAR -->
+        <nav class="absolute bottom-0 left-0 right-0 glass-panel px-6 py-3 flex items-center justify-between border-t border-dark-800 z-30">
+            <button @click="activeTab = 'menu'" :class="activeTab === 'menu' ? 'text-brand-400' : 'text-slate-400 hover:text-white'" class="flex flex-col items-center gap-1 transition">
+                <i data-lucide="utensils-crossed" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Cardápio</span>
+            </button>
+            <button @click="activeTab = 'status'" :class="activeTab === 'status' ? 'text-brand-400' : 'text-slate-400 hover:text-white'" class="flex flex-col items-center gap-1 transition relative">
+                <i data-lucide="activity" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Pedidos</span>
+                <span x-show="orders.length > 0" class="absolute -top-1 right-2 w-2 h-2 rounded-full bg-brand-500"></span>
+            </button>
+            <button @click="activeTab = 'mesa'" :class="activeTab === 'mesa' ? 'text-brand-400' : 'text-slate-400 hover:text-white'" class="flex flex-col items-center gap-1 transition">
+                <i data-lucide="layout-grid" class="w-5 h-5"></i>
+                <span class="text-[10px] font-semibold">Mesa</span>
+            </button>
+        </nav>
+
+        <!-- CART DRAWER / MODAL -->
+        <div x-show="cartOpen" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end transition-opacity" x-transition.opacity>
+            <div class="w-full max-w-md bg-dark-900 h-full flex flex-col justify-between border-l border-dark-800 shadow-2xl" @click.stop>
+                <!-- Cart Header -->
+                <div class="p-4 border-b border-dark-800 flex items-center justify-between glass-panel">
+                    <h3 class="font-bold text-white flex items-center gap-2">
+                        <i data-lucide="shopping-bag" class="w-5 h-5 text-brand-400"></i> Sua Sacola
+                    </h3>
+                    <button @click="cartOpen = false" class="p-2 rounded-xl bg-dark-800 text-slate-400 hover:text-white transition">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <!-- Cart Items List -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                    <template x-if="cart.length === 0">
+                        <div class="text-center py-16 space-y-3">
+                            <i data-lucide="shopping-cart" class="w-12 h-12 text-slate-600 mx-auto"></i>
+                            <p class="text-sm text-slate-400">Sua sacola está vazia.</p>
+                        </div>
+                    </template>
+                    <template x-for="(item, index) in cart" :key="index">
+                        <div class="glass-card rounded-xl p-3 flex items-center justify-between border border-dark-700">
+                            <div class="flex items-center space-x-3">
+                                <img :src="item.image" class="w-12 h-12 rounded-lg object-cover">
+                                <div>
+                                    <h4 class="font-bold text-xs text-white" x-text="item.name"></h4>
+                                    <p class="text-xs text-brand-400 font-semibold mt-0.5" x-text="formatMoney(item.price)"></p>
+                                    <p x-show="item.obs" class="text-[10px] text-slate-400 italic mt-0.5" x-text="'Obs: ' + item.obs"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button @click="updateQty(index, -1)" class="w-7 h-7 rounded-lg bg-dark-800 text-slate-300 hover:text-white flex items-center justify-center">-</button>
+                                <span class="text-xs font-bold w-4 text-center" x-text="item.qty"></span>
+                                <button @click="updateQty(index, 1)" class="w-7 h-7 rounded-lg bg-dark-800 text-slate-300 hover:text-white flex items-center justify-center">+</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Cart Footer & Checkout -->
+                <div class="p-4 border-t border-dark-800 glass-panel space-y-3">
+                    <div class="space-y-1.5 text-xs">
+                        <div class="flex justify-between text-slate-400">
+                            <span>Subtotal</span>
+                            <span x-text="formatMoney(cartSubtotal)"></span>
+                        </div>
+                        <div class="flex justify-between text-slate-400">
+                            <span>Taxa de Serviço (10%)</span>
+                            <span x-text="formatMoney(cartServiceFee)"></span>
+                        </div>
+                        <div class="flex justify-between text-base font-extrabold text-white pt-2 border-t border-dark-800">
+                            <span>Total</span>
+                            <span class="text-brand-400" x-text="formatMoney(cartTotal)"></span>
+                        </div>
+                    </div>
+
+                    <button @click="checkout()" :disabled="cart.length === 0" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold text-sm transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2">
+                        <i data-lucide="check-circle-2" class="w-4 h-4"></i> Enviar Pedido para Cozinha
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ITEM DETAIL MODAL -->
+        <div x-show="itemModalOpen" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4" x-transition.opacity>
+            <div class="w-full max-w-md bg-dark-900 rounded-t-3xl sm:rounded-2xl overflow-hidden border border-dark-800 shadow-2xl max-h-[90vh] flex flex-col" @click.stop>
+                <div class="relative h-48">
+                    <img :src="selectedItem.image" class="w-full h-full object-cover">
+                    <button @click="itemModalOpen = false" class="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white backdrop-blur-md">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+                <div class="p-5 space-y-4 flex-1 overflow-y-auto">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-md" x-text="selectedItem.categoryName"></span>
+                            <span class="text-xs text-slate-400 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> <span x-text="selectedItem.time"></span></span>
+                        </div>
+                        <h3 class="text-lg font-extrabold text-white mt-1.5" x-text="selectedItem.name"></h3>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed" x-text="selectedItem.description"></p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-xs font-semibold text-slate-300">Observações para a Cozinha</label>
+                        <input type="text" x-model="selectedItemObs" placeholder="Ex: Sem cebola, molho à parte..." class="w-full bg-dark-800 border border-dark-700 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-brand-500">
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2">
+                        <div class="flex items-center space-x-3">
+                            <button @click="selectedItemQty > 1 ? selectedItemQty-- : null" class="w-8 h-8 rounded-lg bg-dark-800 text-white font-bold flex items-center justify-center">-</button>
+                            <span class="text-sm font-bold w-4 text-center" x-text="selectedItemQty"></span>
+                            <button @click="selectedItemQty++" class="w-8 h-8 rounded-lg bg-dark-800 text-white font-bold flex items-center justify-center">+</button>
+                        </div>
+                        <span class="text-lg font-extrabold text-brand-400" x-text="formatMoney(selectedItem.price * selectedItemQty)"></span>
+                    </div>
+
+                    <button @click="addItemToCartModal()" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold text-sm transition shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Adicionar à Sacola
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOAST NOTIFICATION -->
+        <div x-show="toast.show" x-transition class="fixed top-16 left-1/2 -translate-x-1/2 z-50 glass-panel px-4 py-3 rounded-2xl shadow-2xl border border-brand-500/30 flex items-center gap-2.5">
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+            <span class="text-xs font-medium text-white" x-text="toast.message"></span>
+        </div>
+
+    </div>
+
+    <script>
+        function mesaByteApp() {
+            return {
+                activeTab: 'menu',
+                clientName: 'Visitante UniCarioca',
+                searchQuery: '',
+                selectedCategory: 'all',
+                cartOpen: false,
+                itemModalOpen: false,
+                selectedItem: {},
+                selectedItemQty: 1,
+                selectedItemObs: '',
+                toast: { show: false, message: '' },
+                cart: [], // Garante que o carrinho inicia estritamente vazio
+                orders: [],
+                categories: [
+                    { id: 'all', name: 'Todos' },
+                    { id: 'burgers', name: 'Burgers & Grill' },
+                    { id: 'drinks', name: 'Bebidas' },
+                    { id: 'desserts', name: 'Sobremesas' }
+                ],
+                products: [
+                    {
+                        id: 1,
+                        categoryId: 'burgers',
+                        categoryName: 'Burger & Grill',
+                        name: 'MesaByte Burger Artesanal',
+                        description: 'Blend 180g de angus, queijo cheddar cremoso, bacon crocante defumado e molho especial da casa no brioche.',
+                        price: 38.90,
+                        time: '15-20 min',
+                        image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 2,
+                        categoryId: 'burgers',
+                        categoryName: 'Burger & Grill',
+                        name: 'Cyber Bacon Smash',
+                        description: 'Duplo smash burger 90g, queijo prato derretido, cebola caramelized e bacon em tiras finas.',
+                        price: 34.50,
+                        time: '12-18 min',
+                        image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 3,
+                        categoryId: 'drinks',
+                        categoryName: 'Bebidas',
+                        name: 'Soda Italiana de Frutas Vermelhas',
+                        description: 'Água com gás aromatizada com xarope artesanal de frutas vermelhas e limão siciliano.',
+                        price: 14.00,
+                        time: '5 min',
+                        image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 4,
+                        categoryId: 'drinks',
+                        categoryName: 'Bebidas',
+                        name: 'Milkshake Double Chocolate',
+                        description: 'Sorvete artesanal de chocolate belga, calda fudge e chantilly fresco.',
+                        price: 18.90,
+                        time: '8 min',
+                        image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 5,
+                        categoryId: 'desserts',
+                        categoryName: 'Sobremesas',
+                        name: 'Brownie com Sorvete de Baunilha',
+                        description: 'Brownie de chocolate meio amargo aquecido, servido com sorvete de baunilha em fava.',
+                        price: 19.90,
+                        time: '10 min',
+                        image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&w=600&q=80'
+                    }
+                ],
+                init() {
+                    // Limpa qualquer cache ou carrinho anterior para garantir que inicie vazio
+                    localStorage.removeItem('mesabyte_cart');
+                    this.cart = [];
+                    
+                    setTimeout(() => {
+                        lucide.createIcons();
+                    }, 100);
+                    this.$watch('activeTab', () => {
+                        setTimeout(() => lucide.createIcons(), 50);
+                    });
+                },
+                get filteredProducts() {
+                    return this.products.filter(item => {
+                        const matchCat = this.selectedCategory === 'all' || item.categoryId === this.selectedCategory;
+                        const matchSearch = item.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || item.description.toLowerCase().includes(this.searchQuery.toLowerCase());
+                        return matchCat && matchSearch;
+                    });
+                },
+                get cartCount() {
+                    return this.cart.reduce((sum, item) => sum + item.qty, 0);
+                },
+                get cartSubtotal() {
+                    return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+                },
+                get cartServiceFee() {
+                    return this.cartSubtotal * 0.10;
+                },
+                get cartTotal() {
+                    return this.cartSubtotal + this.cartServiceFee;
+                },
+                formatMoney(val) {
+                    return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                },
+                openCart() {
+                    this.cartOpen = true;
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+                openItemModal(item) {
+                    this.selectedItem = item;
+                    this.selectedItemQty = 1;
+                    this.selectedItemObs = '';
+                    this.itemModalOpen = true;
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+                addToCartDirect(item) {
+                    const existing = this.cart.find(i => i.id === item.id && !i.obs);
+                    if (existing) {
+                        existing.qty++;
+                    } else {
+                        this.cart.push({ ...item, qty: 1, obs: '' });
+                    }
+                    this.showToast(item.name + ' adicionado à sacola!');
+                },
+                addItemToCartModal() {
+                    this.cart.push({
+                        ...this.selectedItem,
+                        qty: this.selectedItemQty,
+                        obs: this.selectedItemObs
+                    });
+                    this.itemModalOpen = false;
+                    this.showToast(this.selectedItem.name + ' adicionado à sacola!');
+                },
+                updateQty(index, change) {
+                    this.cart[index].qty += change;
+                    if (this.cart[index].qty <= 0) {
+                        this.cart.splice(index, 1);
+                    }
+                },
+                checkout() {
+                    if (this.cart.length === 0) return;
+                    const newOrder = {
+                        id: Math.floor(1000 + Math.random() * 9000),
+                        items: [...this.cart],
+                        total: this.cartTotal,
+                        status: 'Recebido',
+                        step: 1,
+                        timeFormatted: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    };
+                    this.orders.unshift(newOrder);
+                    this.cart = [];
+                    this.cartOpen = false;
+                    this.activeTab = 'status';
+                    this.showToast('Pedido enviado para a cozinha com sucesso!');
+                    setTimeout(() => lucide.createIcons(), 50);
+                },
+                callWaiter() {
+                    this.showToast('Garçom chamado para a Mesa 04!');
+                },
+                requestBill() {
+                    this.showToast('Solicitação de conta enviada ao caixa!');
+                },
+                changeClientName() {
+                    const name = prompt('Digite seu nome:', this.clientName);
+                    if (name) this.clientName = name;
+                },
+                showToast(msg) {
+                    this.toast.message = msg;
+                    this.toast.show = true;
+                    setTimeout(() => {
+                        this.toast.show = false;
+                    }, 3000);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
