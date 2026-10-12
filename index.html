@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MesaByte | Cardápio Digital & Autoatendimento</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#09090b',
+                        cardBg: '#18181b',
+                        brandPurple: '#7c3aed',
+                        brandIndigo: '#4f46e5',
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.5/cdn.min.js"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #09090b;
+            color: #f4f4f5;
+            overflow-x: hidden;
+        }
+        .glass-panel {
+            background: rgba(24, 24, 27, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-header {
+            background: rgba(9, 9, 11, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .animate-glow {
+            animation: pulseGlow 4s ease-in-out infinite;
+        }
+    </style>
+</head>
+<body x-data="mesaByteApp()" x-init="init()" class="min-h-screen pb-24 selection:bg-indigo-500 selection:text-white">
+
+    <!-- Ambient background glowing blobs -->
+    <div class="fixed top-0 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none animate-glow"></div>
+    <div class="fixed bottom-10 right-10 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none animate-glow" style="animation-delay: 2s;"></div>
+
+    <div x-show="showWelcomeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" x-transition.opacity>
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden border border-indigo-500/30">
+            <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-indigo-500/20 to-transparent rounded-bl-full pointer-events-none"></div>
+            
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-500/30 mb-4">
+                    <i data-lucide="utensils" class="w-8 h-8"></i>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight text-white">MesaByte Autoatendimento</h1>
+                <p class="text-sm text-zinc-400 mt-1">Simulação de Leitura de QR Code</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">Seu Nome / Apelido</label>
+                    <input type="text" x-model="customerName" placeholder="Ex: Carlos Silva" class="w-full bg-zinc-900/90 border border-zinc-800 rounded-xl px-4 py-3 text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">Mesa Selecionada</label>
+                    <div class="flex items-center justify-between bg-zinc-900/90 border border-zinc-800 rounded-xl px-4 py-3 text-white">
+                        <span class="flex items-center gap-2 font-medium">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-indigo-400"></i>
+                            Mesa 04 — Salão Principal
+                        </span>
+                        <span class="text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-full font-semibold">Ativa</span>
+                    </div>
+                </div>
+
+                <button @click="enterApp()" class="w-full mt-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-600/30 transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                    <span>Acessar Cardápio Digital</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <p class="text-center text-xs text-zinc-500 mt-6">Projeto Acadêmico • Apresentação 2026</p>
+        </div>
+    </div>
+
+    <header class="sticky top-0 z-40 glass-header px-4 py-3.5 transition-all">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/30">
+                    <i data-lucide="zap" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <span class="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-zinc-200 to-indigo-300 bg-clip-text text-transparent">MesaByte</span>
+                    <div class="flex items-center gap-1.5 text-xs text-zinc-400">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Mesa 04 • <span x-text="customerName || 'Cliente'"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Waiter Call Button -->
+                <button @click="openWaiterModal = true" class="px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all">
+                    <i data-lucide="bell" class="w-3.5 h-3.5 text-amber-400"></i>
+                    <span class="hidden sm:inline">Chamar Garçom</span>
+                </button>
+
+                <!-- Active Order Status Button -->
+                <template x-if="orders.length > 0">
+                    <button @click="showTrackingModal = true" class="relative px-3 py-2 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all animate-pulse">
+                        <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                        <span>Pedido Ativo</span>
+                    </button>
+                </template>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 pt-6 space-y-6">
+
+        <!-- Hero Card -->
+        <div class="relative rounded-3xl overflow-hidden glass-panel p-6 md:p-8 border border-indigo-500/20">
+            <div class="absolute -right-10 -bottom-10 w-60 h-60 bg-gradient-to-tl from-indigo-600/30 to-violet-600/10 rounded-full blur-2xl pointer-events-none"></div>
+            <div class="relative z-10 max-w-lg">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-3">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Experiência Gastronômica Inteligente
+                </span>
+                <h2 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">O que você vai saborear hoje?</h2>
+                <p class="text-sm text-zinc-400 mt-2">Peça direto da mesa com inteligência artificial, personalização completa e acompanhamento em tempo real.</p>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="mt-6 relative">
+                <i data-lucide="search" class="absolute left-4 top-3.5 w-4 h-4 text-zinc-500"></i>
+                <input type="text" x-model="searchQuery" placeholder="Buscar pratos, ingredientes ou bebidas..." class="w-full bg-zinc-900/90 border border-zinc-800 rounded-2xl pl-11 pr-4 py-3 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors shadow-inner">
+            </div>
+        </div>
+
+        <!-- Categories Horizontal Scroll -->
+        <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar py-1">
+            <template x-for="cat in categories" :key="cat.id">
+                <button @click="selectedCategory = cat.id" :class="selectedCategory === cat.id ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg shadow-indigo-600/30 border-transparent' : 'bg-zinc-900/80 text-zinc-400 border-zinc-800 hover:border-zinc-700 hover:text-zinc-200'" class="px-4 py-2.5 rounded-2xl text-xs font-semibold whitespace-nowrap border transition-all flex items-center gap-2">
+                    <span x-text="cat.icon"></span>
+                    <span x-text="cat.name"></span>
+                </button>
+            </template>
+        </div>
+
+        <!-- PRODUCTS GRID -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <template x-for="product in filteredProducts" :key="product.id">
+                <div @click="openCustomization(product)" class="glass-panel rounded-3xl overflow-hidden group cursor-pointer hover:border-indigo-500/40 transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
+                    <div class="relative h-44 overflow-hidden bg-zinc-900">
+                        <img :src="product.image" :alt="product.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://placehold.co/400x300/18181b/71717a?text=MesaByte'">
+                        <div class="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent opacity-80"></div>
+                        
+                        <template x-if="product.badge">
+                            <span class="absolute top-3 left-3 bg-indigo-600/90 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md uppercase tracking-wider" x-text="product.badge"></span>
+                        </template>
+
+                        <div class="absolute bottom-3 right-3 bg-zinc-900/90 backdrop-blur-md border border-zinc-700 text-white font-bold text-sm px-3 py-1 rounded-xl shadow-lg">
+                            <span x-text="formatMoney(product.price)"></span>
+                        </div>
+                    </div>
+
+                    <div class="p-4 flex flex-col flex-grow justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <h3 class="font-bold text-white group-hover:text-indigo-400 transition-colors text-base" x-text="product.name"></h3>
+                            </div>
+                            <p class="text-xs text-zinc-400 line-clamp-2 mt-1" x-text="product.description"></p>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
+                            <span class="flex items-center gap-1">
+                                <i data-lucide="clock" class="w-3.5 h-3.5 text-zinc-500"></i>
+                                <span x-text="product.time"></span>
+                            </span>
+                            <span class="text-indigo-400 font-semibold group-hover:underline flex items-center gap-1">
+                                Personalizar <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <template x-if="filteredProducts.length === 0">
+            <div class="text-center py-16 glass-panel rounded-3xl p-8">
+                <i data-lucide="search-x" class="w-12 h-12 text-zinc-600 mx-auto mb-3"></i>
+                <h3 class="text-lg font-bold text-white">Nenhum item encontrado</h3>
+                <p class="text-sm text-zinc-400 mt-1">Tente buscar por outro termo ou categoria.</p>
+            </div>
+        </template>
+    </main>
+
+    <div x-show="showCustomModal" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md" x-transition.opacity>
+        <div class="glass-panel w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl p-6 max-h-[90vh] overflow-y-auto shadow-2xl relative border border-indigo-500/30" @click.away="closeCustomModal()">
+            <template x-if="activeProduct">
+                <div>
+                    <div class="relative h-48 rounded-2xl overflow-hidden mb-4 bg-zinc-900">
+                        <img :src="activeProduct.image" :alt="activeProduct.name" class="w-full h-full object-cover">
+                        <button @click="closeCustomModal()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-zinc-900/80 backdrop-blur-md text-white flex items-center justify-center hover:bg-zinc-800">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <h2 class="text-xl font-bold text-white" x-text="activeProduct.name"></h2>
+                    <p class="text-xs text-zinc-400 mt-1" x-text="activeProduct.description"></p>
+                    <div class="text-lg font-extrabold text-indigo-400 mt-2" x-text="formatMoney(activeProduct.price)"></div>
+
+                    <div class="mt-6 space-y-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-300 mb-2">Observações Especiais para a Cozinha</label>
+                            <textarea x-model="customNotes" placeholder="Ex: Sem cebola, ponto da carne mal passado, molho à parte..." class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500 h-20 resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-zinc-800 flex items-center gap-4">
+                        <div class="flex items-center bg-zinc-900 border border-zinc-800 rounded-xl p-1">
+                            <button @click="if(customQuantity > 1) customQuantity--" class="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-white">
+                                <i data-lucide="minus" class="w-4 h-4"></i>
+                            </button>
+                            <span class="w-10 text-center font-bold text-white text-sm" x-text="customQuantity"></span>
+                            <button @click="customQuantity++" class="w-9 h-9 flex items-center justify-center text-zinc-400 hover:text-white">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <button @click="addToCartFromModal()" class="flex-grow bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-3 px-6 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2">
+                            <span>Adicionar • <span x-text="formatMoney(activeProduct.price * customQuantity)"></span></span>
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <template x-if="cart.length > 0">
+        <div class="fixed bottom-4 left-4 right-4 max-w-xl mx-auto z-40">
+            <div @click="showCartDrawer = true" class="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-4 shadow-2xl shadow-indigo-600/50 text-white flex items-center justify-between cursor-pointer transform hover:scale-[1.02] transition-all border border-indigo-400/30">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-white" x-text="cartTotalItems"></div>
+                    <div>
+                        <div class="font-bold text-sm">Ver Carrinho & Pedido</div>
+                        <div class="text-xs text-indigo-200" x-text="cart.length + (cart.length === 1 ? ' item selecionado' : ' itens selecionados')"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="font-extrabold text-base" x-text="formatMoney(cartTotalPrice)"></span>
+                    <i data-lucide="chevron-up" class="w-5 h-5"></i>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <div x-show="showCartDrawer" class="fixed inset-0 z-50 flex justify-end bg-black/80 backdrop-blur-md" x-transition.opacity>
+        <div class="glass-panel w-full max-w-md h-full flex flex-col justify-between p-6 overflow-y-auto shadow-2xl border-l border-indigo-500/30" @click.away="showCartDrawer = false">
+            <div>
+                <div class="flex items-center justify-between pb-4 border-b border-zinc-800">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="shopping-bag" class="w-5 h-5 text-indigo-400"></i>
+                        <h2 class="text-lg font-bold text-white">Seu Pedido na Mesa 04</h2>
+                    </div>
+                    <button @click="showCartDrawer = false" class="w-8 h-8 rounded-full bg-zinc-900 text-zinc-400 hover:text-white flex items-center justify-center">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <div class="mt-6 space-y-4 max-h-[45vh] overflow-y-auto pr-1">
+                    <template x-for="(item, index) in cart" :key="index">
+                        <div class="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3.5 flex items-center justify-between">
+                            <div class="flex-grow pr-3">
+                                <div class="font-bold text-white text-sm" x-text="item.name"></div>
+                                <template x-if="item.notes">
+                                    <div class="text-[11px] text-zinc-400 italic mt-0.5" x-text="'Obs: ' + item.notes"></div>
+                                </template>
+                                <div class="text-xs font-semibold text-indigo-400 mt-1" x-text="formatMoney(item.price * item.quantity)"></div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 bg-zinc-950/60 rounded-xl p-1 border border-zinc-800">
+                                <button @click="updateCartQty(index, -1)" class="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-white">
+                                    <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                                </button>
+                                <span class="text-xs font-bold text-white w-5 text-center" x-text="item.quantity"></span>
+                                <button @click="updateCartQty(index, 1)" class="w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-white">
+                                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="mt-6 space-y-4 pt-4 border-t border-zinc-800">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-zinc-400">Gorjeta do Garçom (10%)</span>
+                        <input type="checkbox" x-model="includeTip" class="w-4 h-4 accent-indigo-600 rounded">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-zinc-400 mb-2">Forma de Pagamento</label>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button @click="paymentMethod = 'pix'" :class="paymentMethod === 'pix' ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-zinc-800 bg-zinc-900 text-zinc-400'" class="border rounded-xl py-2.5 text-xs font-semibold text-center transition-all">Pix</button>
+                            <button @click="paymentMethod = 'card'" :class="paymentMethod === 'card' ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-zinc-800 bg-zinc-900 text-zinc-400'" class="border rounded-xl py-2.5 text-xs font-semibold text-center transition-all">Cartão Mesa</button>
+                            <button @click="paymentMethod = 'later'" :class="paymentMethod === 'later' ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-zinc-800 bg-zinc-900 text-zinc-400'" class="border rounded-xl py-2.5 text-xs font-semibold text-center transition-all">Pagar Final</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-zinc-800 space-y-3">
+                <div class="space-y-1.5 text-xs">
+                    <div class="flex justify-between text-zinc-400">
+                        <span>Subtotal</span>
+                        <span x-text="formatMoney(cartTotalPrice)"></span>
+                    </div>
+                    <template x-if="includeTip">
+                        <div class="flex justify-between text-zinc-400">
+                            <span>Gorjeta (10%)</span>
+                            <span x-text="formatMoney(cartTotalPrice * 0.1)"></span>
+                        </div>
+                    </template>
+                    <div class="flex justify-between text-white font-extrabold text-base pt-1 border-t border-zinc-800">
+                        <span>Total Geral</span>
+                        <span class="text-indigo-400" x-text="formatMoney(finalTotalPrice)"></span>
+                    </div>
+                </div>
+
+                <button @click="submitOrder()" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                    <span>Enviar Pedido para a Cozinha</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="showTrackingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" x-transition.opacity>
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 shadow-2xl relative border border-indigo-500/30">
+            <div class="flex items-center justify-between pb-4 border-b border-zinc-800 mb-6">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="clock" class="w-5 h-5 text-indigo-400"></i>
+                    <h2 class="text-lg font-bold text-white">Acompanhamento KDS</h2>
+                </div>
+                <button @click="showTrackingModal = false" class="w-8 h-8 rounded-full bg-zinc-900 text-zinc-400 hover:text-white flex items-center justify-center">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="space-y-6 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-800">
+                <div class="flex items-start gap-4 relative">
+                    <div :class="orderStatus >= 1 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'bg-zinc-800 text-zinc-500'" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold z-10 transition-colors">1</div>
+                    <div>
+                        <h4 class="font-bold text-white text-sm">Pedido Recebido na Cozinha</h4>
+                        <p class="text-xs text-zinc-400 mt-0.5">O KDS MesaByte registrou o seu pedido com sucesso.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4 relative">
+                    <div :class="orderStatus >= 2 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30' : 'bg-zinc-800 text-zinc-500'" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold z-10 transition-colors">2</div>
+                    <div>
+                        <h4 class="font-bold text-white text-sm">Em Preparo na Cozinha</h4>
+                        <p class="text-xs text-zinc-400 mt-0.5">O chef já iniciou a preparação dos itens.</p>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-4 relative">
+                    <div :class="orderStatus >= 3 ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30' : 'bg-zinc-800 text-zinc-500'" class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold z-10 transition-colors">3</div>
+                    <div>
+                        <h4 class="font-bold text-white text-sm">Pronto / Servido na Mesa</h4>
+                        <p class="text-xs text-zinc-400 mt-0.5">Bom apetite! Pedido entregue na Mesa 04.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-4 border-t border-zinc-800">
+                <span class="block text-[11px] font-semibold text-zinc-500 uppercase tracking-wider mb-2">Controle de Demonstração (Apresentação)</span>
+                <div class="grid grid-cols-3 gap-2">
+                    <button @click="orderStatus = 1" class="py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white">1. Recebido</button>
+                    <button @click="orderStatus = 2" class="py-2 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white">2. Preparo</button>
+                    <button @click="orderStatus = 3" class="py-2 bg-emerald-600/20 border border-emerald-500/30 rounded-xl text-xs font-semibold text-emerald-300">3. Servido</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div x-show="openWaiterModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md" x-transition.opacity>
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 shadow-2xl relative border border-amber-500/30">
+            <div class="text-center mb-5">
+                <div class="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="bell" class="w-7 h-7"></i>
+                </div>
+                <h3 class="text-lg font-bold text-white">Chamar Atendimento</h3>
+                <p class="text-xs text-zinc-400 mt-1">O garçom mais próximo da Mesa 04 será notificado imediatamente.</p>
+            </div>
+
+            <div class="space-y-2">
+                <button @click="callWaiterAction('Chamar Garçom')" class="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="user" class="w-4 h-4 text-amber-400"></i>
+                    <span>Chamar Garçom na Mesa</span>
+                </button>
+                <button @click="callWaiterAction('Solicitar a Conta')" class="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="receipt" class="w-4 h-4 text-emerald-400"></i>
+                    <span>Solicitar Fechamento da Conta</span>
+                </button>
+                <button @click="callWaiterAction('Pedir Auxílio com o Cardápio')" class="w-full bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white font-semibold py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="help-circle" class="w-4 h-4 text-indigo-400"></i>
+                    <span>Pedir Ajuda com o Aplicativo</span>
+                </button>
+            </div>
+
+            <button @click="openWaiterModal = false" class="w-full mt-4 text-xs font-semibold text-zinc-500 hover:text-zinc-300 text-center py-2">Cancelar</button>
+        </div>
+    </div>
+
+    <div x-show="toastMessage" x-transition class="fixed top-5 right-5 z-50 bg-zinc-900 border border-indigo-500/40 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-indigo-600/20 text-indigo-400 flex items-center justify-center">
+            <i data-lucide="check" class="w-4 h-4"></i>
+        </div>
+        <div>
+            <div class="text-xs font-bold">MesaByte Notificação</div>
+            <div class="text-xs text-zinc-400" x-text="toastMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        function mesaByteApp() {
+            return {
+                showWelcomeModal: true,
+                showCartDrawer: false,
+                showCustomModal: false,
+                showTrackingModal: false,
+                openWaiterModal: false,
+                customerName: 'Carlos Silva',
+                searchQuery: '',
+                selectedCategory: 'all',
+                activeProduct: null,
+                customQuantity: 1,
+                customNotes: '',
+                includeTip: true,
+                paymentMethod: 'pix',
+                toastMessage: '',
+                orderStatus: 0,
+                
+                categories: [
+                    { id: 'all', name: 'Todos', icon: '🍽️' },
+                    { id: 'entradas', name: 'Entradas', icon: '🥗' },
+                    { id: 'burgers', name: 'Burgers', icon: '🍔' },
+                    { id: 'principais', name: 'Principais', icon: '🥩' },
+                    { id: 'bebidas', name: 'Bebidas', icon: '🍹' },
+                    { id: 'sobremesas', name: 'Sobremesas', icon: '🍰' }
+                ],
+
+                products: [
+                    {
+                        id: 1,
+                        category: 'burgers',
+                        name: 'MesaByte Truffled Burger',
+                        description: 'Blend wagyu 180g, queijo brie maçaricado, bacon crocante, rúcula orgânica e maionese de trufas negras no pão brioche artesanal.',
+                        price: 54.90,
+                        time: '15-20 min',
+                        badge: 'Mais Vendido',
+                        image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 2,
+                        category: 'burgers',
+                        name: 'Cyber Bacon Crispy',
+                        description: 'Duplo smash burger 100g, cheddar cremoso inglês, cebola caramelizada no bourbon e bacon extra crispy.',
+                        price: 46.90,
+                        time: '12-18 min',
+                        badge: 'Destaque',
+                        image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 3,
+                        category: 'principais',
+                        name: 'Entrecôte com Fritas Trufadas',
+                        description: 'Corte noble de 300g grelhado ao ponto, acompanhado de batatas rústicas com azeite trufado e queijo parmesão gratinado.',
+                        price: 89.90,
+                        time: '20-25 min',
+                        badge: 'Chef Choice',
+                        image: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 4,
+                        category: 'entradas',
+                        name: 'Tartare de Salmão Fresco',
+                        description: 'Salmão batido na ponta da faca, abacate cremoso, chips de batata doce artesanais e emulsão de limão siciliano.',
+                        price: 42.00,
+                        time: '10 min',
+                        badge: 'Novo',
+                        image: 'https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 5,
+                        category: 'bebidas',
+                        name: 'Gin Tônica Botânica Red Berries',
+                        description: 'Gin premium importado, tônica artesanal, infusão de frutas vermelhas silvestres, zimbro e alecrim fresco.',
+                        price: 36.00,
+                        time: '5 min',
+                        badge: 'Drink do Dia',
+                        image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=600&q=80'
+                    },
+                    {
+                        id: 6,
+                        category: 'sobremesas',
+                        name: 'Cheesecake Red Velvet & Frutas Vermelhas',
+                        description: 'Base amanteigada crocante, creme aveludado de cream cheese e calda artesanal de frutas vermelhas frescas.',
+                        price: 28.50,
+                        time: '5 min',
+                        badge: 'Imperdível',
+                        image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80'
+                    }
+                ],
+
+                cart: [],
+
+                orders: [],
+
+                formatMoney(value) {
+                    if (typeof value !== 'number' || isNaN(value)) return 'R$ 0,00';
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    }).format(value);
+                },
+
+                get filteredProducts() {
+                    return this.products.filter(p => {
+                        const matchesCategory = this.selectedCategory === 'all' || p.category === this.selectedCategory;
+                        const matchesSearch = p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || p.description.toLowerCase().includes(this.searchQuery.toLowerCase());
+                        return matchesCategory && matchesSearch;
+                    });
+                },
+
+                get cartTotalItems() {
+                    return this.cart.reduce((sum, item) => sum + item.quantity, 0);
+                },
+
+                get cartTotalPrice() {
+                    return this.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                },
+
+                get finalTotalPrice() {
+                    let total = this.cartTotalPrice;
+                    if (this.includeTip) total += total * 0.1;
+                    return total;
+                },
+
+                init() {
+                    setTimeout(() => {
+                        if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                            lucide.createIcons();
+                        }
+                    }, 100);
+                },
+
+                enterApp() {
+                    if (!this.customerName.trim()) {
+                        this.customerName = 'Visitante Mesa 04';
+                    }
+                    this.showWelcomeModal = false;
+                    this.showToast('Bem-vindo ao MesaByte! Mesa 04 conectada.');
+                    setTimeout(() => {
+                        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+                    }, 50);
+                },
+
+                openCustomization(product) {
+                    this.activeProduct = product;
+                    this.customQuantity = 1;
+                    this.customNotes = '';
+                    this.showCustomModal = true;
+                    setTimeout(() => {
+                        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+                    }, 50);
+                },
+
+                closeCustomModal() {
+                    this.showCustomModal = false;
+                    this.activeProduct = null;
+                },
+
+                addToCartFromModal() {
+                    if (!this.activeProduct) return;
+                    
+                    const existingIndex = this.cart.findIndex(item => item.id === this.activeProduct.id && item.notes === this.customNotes);
+                    
+                    if (existingIndex > -1) {
+                        this.cart[existingIndex].quantity += this.customQuantity;
+                    } else {
+                        this.cart.push({
+                            id: this.activeProduct.id,
+                            name: this.activeProduct.name,
+                            price: this.activeProduct.price,
+                            quantity: this.customQuantity,
+                            notes: this.customNotes
+                        });
+                    }
+
+                    this.showToast(`${this.customQuantity}x ${this.activeProduct.name} adicionado ao pedido!`);
+                    this.closeCustomModal();
+                },
+
+                updateCartQty(index, change) {
+                    this.cart[index].quantity += change;
+                    if (this.cart[index].quantity <= 0) {
+                        this.cart.splice(index, 1);
+                    }
+                },
+
+                submitOrder() {
+                    if (this.cart.length === 0) return;
+                    
+                    this.orders.push({
+                        items: [...this.cart],
+                        total: this.finalTotalPrice,
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    });
+
+                    this.cart = [];
+                    this.showCartDrawer = false;
+                    this.orderStatus = 1;
+                    this.showTrackingModal = true;
+                    this.showToast('Pedido enviado para a cozinha com sucesso!');
+                    setTimeout(() => {
+                        if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons();
+                    }, 50);
+                },
+
+                callWaiterAction(actionName) {
+                    this.openWaiterModal = false;
+                    this.showToast(`Solicitação enviada: ${actionName}. O garçom atenderá em instantes.`);
+                },
+
+                showToast(message) {
+                    this.toastMessage = message;
+                    setTimeout(() => {
+                        this.toastMessage = '';
+                    }, 4000);
+                }
+            };
+        }
+    </script>
+</body>
+</html>
